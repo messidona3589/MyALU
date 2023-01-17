@@ -1,0 +1,64 @@
+
+/**
+ * The MyALU. is the ALU of YOUR OWN design that provides the same functions as in the Nand2Tetris project + additional functions (and uses different control bits.
+ * Computes one of the following functions:
+ * x+y, x-y, y-x, 0, 1, -1, x, y, -x, -y, !x, !y,
+ * x+1, y+1, x-1, y-1, x&y, x|y , x XOR y, on two 16-bit inputs, 
+ * according to 6 input bits denoted zx,nx,zy,ny,f,no.
+ * In addition, the ALU computes two 1-bit outputs:
+ * if the ALU output == 0, zr is set to 1; otherwise zr is set to 0;
+ * if the ALU output < 0, ng is set to 1; otherwise ng is set to 0.
+ */
+
+// Implementation: the ALU logic manipulates the x and y inputs
+
+
+CHIP MyALU {
+    IN  
+        x[16], y[16],  // 16-bit inputs        
+        C0, // Control Bit 0 (Least significant) 
+        C1, // Control Bit 1
+        C2, // Control Bit 2
+        C3,  // Control Bit 3
+		C4; // Control Bit 4 (Most significant - 5th Control bit)
+        
+
+    OUT 
+        out[16], // 16-bit output
+        zr, // 1 if (out == 0), 0 otherwise
+        ng; // 1 if (out < 0),  0 otherwise
+
+    PARTS:
+Inc16(in=false,out=one); //1
+Not16(in=x,out=nx); //x'
+Not16(in=y,out=ny); // y'
+Inc16(in=nx,out=mx); // x'+1 = -x
+Inc16(in=ny,out=my); // y'+1=-y
+Inc16(in=x,out=xpo); // x+1
+Inc16(in=y,out=ypo); // y+1
+Add16(a=x,b=true,out=xmo); // x-1
+Add16(a=y,b=true,out=ymo); // y-1
+Add16(a=x,b=y,out=xpy); // x+y
+Add16(a=x,b=my,out=xmy); // x-y
+Add16(a=y,b=mx,out=ymx); // y-x
+And16(a=x,b=y,out=xny); // x&y
+Or16(a=x,b=y,out=xry); // x or y
+Xor16(a=x,b=y,out=xxry); // x xor y
+
+Mux4Way16(a=false,b=one,c=true,d=x,sel[0]=C0, sel[1]=C1,out=F0);
+Mux4Way16(a=y,b=nx,c=ny,d=mx,sel[0]=C0, sel[1]=C1,out=F1);
+Mux4Way16(a=my,b=xpo,c=ypo,d=xmo,sel[0]=C0, sel[1]=C1,out=F2);
+Mux4Way16(a=ymo,b=xpy,c=xmy,d=ymx,sel[0]=C0, sel[1]=C1,out=F3);
+Mux4Way16(a=xny,b=xry,c=xxry,d=false,sel[0]=C0, sel[1]=C1,out=F4);
+
+Mux8Way16(a=F0, b=F1,c=F2,d=F3,e=F4,f=false,g=false,h=false,sel[0]=C2, sel[1]=C3,sel[2]=C4,out=out, out[0..7]=out07, out[8..15]=out815, out[15]=ng0);
+
+//zr
+Or8Way(in=out07, out=zr0);
+Or8Way(in=out815, out=zr1);
+Or(a=zr0, b=zr1, out=zr2);
+Not(in=zr2, out=zr);
+
+//ng
+And(a=ng0, b=true, out=ng);
+}
